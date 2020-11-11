@@ -294,6 +294,6 @@ in a specific order. Keep track of where each contract gets deployed to so that 
 4. Uniswap Factory
 5. Uniswap Periphery Router 1
  
-If you can deploy all of these contracts succesfully, then you are 110% ready to create your own crazy experiments! There's so many different areas worthy of our explaratory efforts. We could incorporate farming into our code above by allowing liquidity providers to earn extra money by staking on middleware contracts that pay them to be ran with each `swap` call. We could even try our hand at porting [layer 2](https://zksync.io/)
+If you can deploy all of these contracts succesfully, then you are 110% ready to create your own crazy experiments! There's so many different areas worthy of our explaratory efforts. We could incorporate farming into our code above by allowing liquidity providers to stake their lp tokens on middleware contracts that pay them to be ran with each `swap` call. We could even try our hand at porting a [layer 2](https://zksync.io/) over to Moonbeam...
  
-Stay tuned for my next tutorial, where I go into a deep dive of how to thorougly test, automate, and collect data on our smart contract's usage in real time using golang!
+Stay tuned for my next tutorial, where I go into a deep dive of how to thorougly itegration test, automate, and collect data on our smart contract's usage in real time using golang!

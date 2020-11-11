@@ -4,7 +4,7 @@ I have a dilemma. I want to experiment with an fun dApp idea I’ve been (figura
  
 Let’s make a dApp! The design that we’re going to deploy today was inspired by the celestial [proton pump](https://en.wikipedia.org/wiki/Proton_pump), and follows the basics of many dApps. Which is, harness the promise of profit to power a service. In our case, we’re going to modify a [Uniswap](https://uniswap.org/) pool to call an arbitrary function every time some entity calls the `swap` method. Running arbitrary functions in a smart contract isn’t a bad idea, it’s a **ghastly** one. So we'll have to put in some restrictions, and ensure that at least the funds in the pool cannot be stolen. Even with appropriate restrictions, running this on a mainnet is reckless at best, at least until we find some safe use cases. We’re never going to find a safe use case if we don’t explore though. So bring your lab coats and off we go to the incentivized testnet, in search of product market fit!
  
-Let's take a deeper dive into exactly how Uniswap `swap`s work. The smart folks over at Uniswap HQ made some very wise design decisions that allow us to do the crazy experiments that we're going to do later. Their swapping system only checks balances at the end of the swap, and before the checks are made, we can run whatever function we want in an atomic fashion. This allows for yoga like flexibility. Check out the swap method `Uniswap/uniswap-v2-core/contracts/UniswapV2Pair.sol`. This method is called for each and every different type of swap.
+Let's take a deeper dive into exactly how Uniswap `swap`s work. The smart folks over at Uniswap HQ made some very wise design decisions that allow us to do the crazy experiments that we're planning. Their swapping system only checks balances at the end of the swap, and before the checks are made, we can run whatever function we want in an atomic fashion. This allows for yoga like flexibility. Check out the swap method `Uniswap/uniswap-v2-core/contracts/UniswapV2Pair.sol`, it's called for every swap.
  
 ```Solidity
 contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
@@ -62,13 +62,13 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
    ...
 }
 ```
-provided it abides by the IUniswapV2Callee interface, of course
+provided our function of choice abides by the IUniswapV2Callee interface, of course
 ```Solidity
 interface IUniswapV2Callee {
    function uniswapV2Call(address sender, uint amount0, uint amount1, bytes calldata data) external;
 }
 ```
-It's also important to note the require statements after we call our function of choice. These expressions enforce the essental rules of any swap. Basically, if the Uniswap pools lose money, then the transaction fails, including whatever our function of choice did.
+It's also important to note the require statements after we call our arbitrary function. These expressions enforce the essental rules of any swap. Basically, if the Uniswap pools lose money, then the transaction fails, including whatever our function of choice did.
 ```Solidity
 contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
    ...
@@ -84,7 +84,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
 ```
 This design, to optimistically swap coins and revert if the pool loses funds, allows any arbitrary function to run while keeping funds safe. This is how flash loans are possible with Uniswap V2. We could use the entire pool's funds in an elaborate arbitrage, just as long as the funds are safely back in the pool by the time we finish. 
  
-So, now that we know how Uniswap `swap`s work, we accomplish what we set out to do, to force arbitrary functions to be called with *each* swap. To do so, we only have to make a few small changes. We'll start off by altering the `swap` function. All we did was remove the `if (data.length > 0)`, so that it will always call a function.
+So, now that we know how Uniswap swaps work, we can accomplish what we set out to do, to force arbitrary functions to be called with *each* swap. To do so, we only have to make a few small changes. We'll start off by altering the `swap` function. All we did was remove the `if (data.length > 0)`, so that it will always call a function.
 ```Solidity
 contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
    ...
@@ -132,7 +132,7 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
    ...
 }
 ```
-If we look at the UniswapV2Factory contract, we can see where and what `feeToSetter` actually does. As we talked about before, the feeToSetter is passed into the constructor, so it's determined by whomever deploys the factory address.
+If we look at the UniswapV2Factory contract, we can see where and what `feeToSetter` actually does. As we just mentioned, the feeToSetter is passed into the constructor, so it's determined by whomever deploys the factory address.
 ```Solidity
 contract UniswapV2Factory is IUniswapV2Factory {
    address public feeTo;
@@ -260,13 +260,13 @@ module.exports = {
  
 };
 ```
-If you don't feel like doing  all of that, then you can just clone a single repo [here](https://github.com/evan-forbes/UniswapMoonbeamPost) where I've done all the work for you. Well, you're still going to have to run `npm install` in each of the 5 directories... and compile the contracts of course.
+If you don't feel like doing all of that, then you can just clone a single repo [here](https://github.com/evan-forbes/UniswapMoonbeamPost) where I've done all the work for you. Well, you're still going to have to run `npm install` in each of the 5 directories... and compile the contracts of course.
  
 Now is a good time to debug, and make sure that all of our projects compile. Run 
 `truffle compile`
 in each project and make sure that they compile completely. There may be a few `warnings`, mainly that we aren't using some variables in our Propane contract. For our purposes, this is fine.
  
-Lastly, we're going to have to change how truffle deploys each contract. An easy rule of thumb, is to look at the `constructor` function located in each contract we're deploying. We're going to need to supply all of the arguments required by the `constructor` function to our deployer functions. For example, the `weth` contract directory doesn't require any arguments in its contructor, so to deploy, we simply have to tell truffle to deploy it. We do that using our `migrations` folder in each directory. Go into the `weth` directory and check out the `2_deploy_weth9.js` file.
+Lastly, we're going to have to change how truffle deploys each contract. An easy rule of thumb is to look at the `constructor` function located in each contract we're deploying. We're going to need to supply all of the arguments required by the `constructor` function to our deployer functions. For example, the `weth` contract directory doesn't require any arguments in its contructor, so to deploy, we simply have to tell truffle to deploy it. We do that using our `migrations` folder in each directory. Go into the `weth` directory and check out the `2_deploy_weth9.js` file.
 ```Javascript
 var weth = artifacts.require("WETH9")
 module.exports = function(deployer) {
@@ -280,12 +280,12 @@ module.exports = function (deployer) {
  deployer.deploy(UniswapFactory, "0x1e259A6490fFa98EcBa6FB61b6A8BF79325507A3", "0x6387E813a1661aBe9aF66c840448811bc25540Fe");
 };
 ```
-Here we're deploying the factory contract in the same fashion as the weth contract, except we're also passing the addresses of the already deployed WETH contract, and the default middleware contract address.
+Here we're deploying the factory contract in the same fashion as the weth contract, except we're also passing the addresses of the already deployed WETH contract, and the default middleware contract address (`Propane`).
  
-Again, I have all of this done for you the [repo](https://github.com/evan-forbes/UniswapMoonbeamPost) mentioned earlier. 
+Again, I have all of this done for you in [this repo](https://github.com/evan-forbes/UniswapMoonbeamPost). 
  
 If we've done everything correctly, then we should be able to deploy our smart contracts on the testnet by using the command  
-`truffle migrate --network` 
+`truffle migrate --network moonbase` 
 in a specific order. Keep track of where each contract gets deployed to so that we can pass that address to other deployments.
  
 1. WETH
